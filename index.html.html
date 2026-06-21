@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Class 1/4 Smart Hub & Treasury</title>
+    <title>Class 1/4 Smart Hub & Treasury (Cloud Sync)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Prompt & Inter -->
@@ -46,7 +46,6 @@
             box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
             transform: translateY(-1px);
         }
-        /* Custom scrollbar for desktop */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -58,14 +57,10 @@
             background: #cbd5e1;
             border-radius: 3px;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
     </style>
 </head>
 <body class="text-slate-800 min-h-full flex flex-col font-sans antialiased bg-slate-50">
 
-    <!-- MAIN CONTAINER -->
     <div id="app" class="flex-1 flex flex-col min-h-screen">
         
         <!-- HEADER / NAVIGATION (Hidden when logged out) -->
@@ -82,9 +77,12 @@
                         </div>
                     </div>
                     
-                    <!-- Mobile Nav Toggle button -->
-                    <div class="flex items-center md:hidden">
-                        <button onclick="toggleMobileMenu()" class="text-slate-500 hover:text-slate-700 focus:outline-none">
+                    <div class="flex items-center md:hidden gap-2">
+                        <!-- Database Mode Badge for Mobile -->
+                        <span id="db-badge-mob" onclick="openSyncModal()" class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 cursor-pointer">
+                            <i class="fa-solid fa-cloud-slash mr-1"></i> Local
+                        </span>
+                        <button onclick="toggleMobileMenu()" class="text-slate-500 hover:text-slate-700 focus:outline-none p-1">
                             <i class="fa-solid fa-bars text-xl"></i>
                         </button>
                     </div>
@@ -106,8 +104,12 @@
                         </button>
                     </div>
 
-                    <!-- User info & Log out -->
                     <div class="hidden md:flex items-center space-x-3 border-l border-slate-200 pl-4 my-3">
+                        <!-- Cloud Sync Status Button -->
+                        <button onclick="openSyncModal()" id="btn-db-status" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors">
+                            <i class="fa-solid fa-database"></i> <span id="db-status-text">โหมดออฟไลน์</span>
+                        </button>
+                        
                         <div class="text-right">
                             <span id="nav-user-name" class="text-xs font-semibold text-slate-900 block">กำลังโหลด...</span>
                             <span id="nav-user-role" class="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">กำลังโหลด...</span>
@@ -133,6 +135,13 @@
                 <button onclick="switchTab('members')" class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-brand-600 transition-all flex items-center gap-2">
                     <i class="fa-solid fa-users w-5"></i> สมาชิกห้อง (รออนุมัติ <span id="badge-pending-mob">0</span>)
                 </button>
+                
+                <div class="border-t border-slate-100 pt-3">
+                    <button onclick="openSyncModal()" class="w-full text-left px-4 py-2 bg-amber-50 text-amber-800 text-xs font-bold rounded-lg mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-cloud"></i> จัดการฐานข้อมูล & ซิงค์เครื่องอื่น
+                    </button>
+                </div>
+
                 <div class="border-t border-slate-100 pt-3 flex items-center justify-between px-4">
                     <div>
                         <span id="nav-user-name-mob" class="text-xs font-semibold text-slate-900 block">กำลังโหลด...</span>
@@ -145,10 +154,9 @@
             </div>
         </nav>
 
-        <!-- MAIN CONTENT CONTAINER -->
         <main class="flex-1 flex flex-col max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
             
-            <!-- AUTHENTICATION SCREEN (Login/Register) -->
+            <!-- AUTHENTICATION SCREEN -->
             <div id="auth-screen" class="flex-1 flex items-center justify-center py-10">
                 <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-8 space-y-6">
                     <div class="text-center space-y-2">
@@ -156,7 +164,7 @@
                             1/4
                         </div>
                         <h2 class="text-2xl font-bold tracking-tight text-slate-900">เข้าสู่ระบบห้องเรียน 1/4</h2>
-                        <p class="text-xs text-slate-500 max-w-xs mx-auto">ระบบบริหารห้องเรียนอย่างโปร่งใส ปราศจากความขัดแย้ง และจัดการเงินอย่างเป็นระบบ</p>
+                        <p class="text-xs text-slate-500 max-w-xs mx-auto">ระบบบริหารห้องเรียนเพื่อความโปร่งใส ปราศจากความขัดแย้ง และจัดการเงินอย่างเป็นระบบ</p>
                     </div>
 
                     <!-- Simple Tab for Login vs Register -->
@@ -186,7 +194,6 @@
                         </button>
                     </form>
 
-                    <!-- REGISTER FORM (Hidden by default) -->
                     <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
                         <div class="grid grid-cols-3 gap-3">
                             <div class="col-span-1">
@@ -208,13 +215,13 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 flex justify-between">
-                                <span>รหัสแอดมินหรือคีย์เข้าห้อง (เว้นได้ถ้าเป็นนักเรียน)</span>
-                                <span class="text-[10px] text-slate-400 font-normal">รหัสแอดมิน: ADMIN14</span>
+                                <span>รหัสความปลอดภัยสำหรับแอดมิน (หัวหน้าห้อง)</span>
+                                <span class="text-[10px] text-rose-500 font-normal">รหัสสิทธิ์แอดมิน: ADMIN14</span>
                             </label>
-                            <input type="password" id="reg-invite-code" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20" placeholder="กรอกเพื่อเป็นหัวหน้าห้อง/ครูประจำชั้น">
+                            <input type="password" id="reg-invite-code" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20" placeholder="เว้นว่างไว้สำหรับสมาชิกทั่วไป">
                         </div>
                         <button type="submit" class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl text-sm glow-button hover:bg-emerald-700">
-                            ลงทะเบียนรอแอดมินอนุมัติ <i class="fa-solid fa-user-plus ml-1.5"></i>
+                            ลงทะเบียน <i class="fa-solid fa-user-plus ml-1.5"></i>
                         </button>
                     </form>
 
@@ -226,7 +233,6 @@
                 </div>
             </div>
 
-            <!-- TAB 1: HOME PAGE -->
             <div id="section-home" class="space-y-6 hidden">
                 
                 <!-- Announcement Banner -->
@@ -235,10 +241,10 @@
                     <div class="absolute -left-10 -top-10 w-44 h-44 bg-sky-300/20 rounded-full blur-2xl pointer-events-none"></div>
                     
                     <div class="relative z-10 max-w-xl space-y-3">
-                        <span class="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase inline-block">ประกาศประชาสัมพันธ์</span>
-                        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">ยินดีต้อนรับสู่ระบบส่วนกลาง ห้อง ม.1/4!</h1>
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase inline-block">ประกาศประชาสัมพันธ์ ม.1/4</span>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">ระบบกลางของชั้นเรียน 1/4 ซิงค์เรียลไทม์</h1>
                         <p class="text-sm font-light text-sky-100 leading-relaxed">
-                            ระบบนี้ถูกสร้างขึ้นเพื่อลดความขัดแย้งในการทำกิจกรรม มีการโหวตคะแนนที่น่าเชื่อถือ และช่วยบริหารบัญชีเงินเก็บของห้องเรียนโดยที่ทุกคนในห้องสามารถตรวจสอบความถูกต้องได้โปร่งใส 100%
+                            ระบบลงทะเบียน ยืนยันตัวตน และจัดการการเงินของห้องเรียนอย่างโปร่งใส 100% สามารถตรวจสอบบัญชีกองกลางได้พร้อมกันทุกอุปกรณ์ทุกเครื่องทั้งบนคอมพิวเตอร์และมือถือ
                         </p>
                     </div>
                 </div>
@@ -279,18 +285,17 @@
                     </div>
                 </div>
 
-                <!-- Activity Feed and Pending Warning -->
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     <!-- Clean Up Wheel (Short summary teaser) -->
                     <div class="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
                         <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                            <i class="fa-solid fa-star text-amber-500"></i> เวรประจำวัน/สุ่มคนตอบคำถามด่วน
+                            <i class="fa-solid fa-star text-amber-500"></i> สุ่มเวร & กิจกรรมยุติธรรม
                         </h3>
                         <p class="text-xs text-slate-500 font-light leading-relaxed">
-                            เบื่อไหมกับการโต้เถียงกันว่าใครจะต้องเป็นคนทำงานกลุ่มหรือทำเวรห้อง? ลองใช้ระบบวงล้อจำลองสุ่มรายชื่อแบบเท่าเทียมที่หน้าเมนูสุ่มเวรได้เลย!
+                            หลีกเลี่ยงความขัดแย้งในการมอบหมายงานกลุ่มหรือการสุ่มลำดับการเสนอผลงาน ด้วยเครื่องมือวงล้อสุ่มที่ทุกคนในห้องไว้วางใจ
                         </p>
                         <button onclick="switchTab('polls')" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors">
-                            เปิดระบบสุ่ม & โหวตทันที
+                            เปิดหน้าสุ่ม & โหวตทันที
                         </button>
                     </div>
 
@@ -300,10 +305,9 @@
                             <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
                                 <i class="fa-solid fa-list-check text-brand-500"></i> ประวัติรายการเงินล่าสุด
                             </h3>
-                            <button onclick="switchTab('finance')" class="text-xs font-bold text-brand-600 hover:text-brand-700">ดูทั้งหมด</button>
+                            <button onclick="switchTab('finance')" class="text-xs font-bold text-brand-600 hover:text-brand-700">ดูบัญชีเต็มรูปแบบ</button>
                         </div>
                         <div id="home-transactions-list" class="space-y-3 max-h-[220px] overflow-y-auto">
-                            <!-- Populated dynamically -->
                             <div class="text-center py-6 text-slate-400 text-xs font-light">ยังไม่มีการบันทึกรายการเงินกองกลางห้องเรียน</div>
                         </div>
                     </div>
@@ -312,7 +316,6 @@
 
             <!-- TAB 2: FINANCE & FUND LEDGER -->
             <div id="section-finance" class="space-y-6 hidden">
-                <!-- Treasury Overview Header -->
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center text-2xl shadow-md shadow-emerald-500/10">
@@ -324,7 +327,6 @@
                         </div>
                     </div>
                     
-                    <!-- Quick actions for Treasurer -->
                     <div id="treasurer-actions" class="hidden flex flex-wrap gap-2">
                         <button onclick="openFinanceModal('income')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-sm">
                             <i class="fa-solid fa-circle-plus"></i> บันทึกรายรับ
@@ -345,10 +347,10 @@
                                 <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
                                     <i class="fa-solid fa-clipboard-user text-brand-500"></i> รายการเช็คส่งเงินห้องประจำสัปดาห์
                                 </h3>
-                                <p class="text-[11px] text-slate-400 font-light mt-0.5">* แอดมินหรือเหรัญญิกสามารถคลิกติ๊กเช็คเพื่อเปลี่ยนสถานะชำระเงินของเพื่อนรายบุคคลได้</p>
+                                <p class="text-[11px] text-slate-400 font-light mt-0.5">* แอดมินสามารถคลิกเปลี่ยนสถานะการส่งเงินของเพื่อนได้โดยตรง ข้อมูลอัปเดตเรียลไทม์</p>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="text-xs text-slate-500 font-medium">สัปดาห์ปัจจุบัน:</span>
+                                <span class="text-xs text-slate-500 font-medium">สัปดาห์:</span>
                                 <select id="week-selector" onchange="onWeekChanged()" class="bg-slate-50 border border-slate-200 text-xs font-bold rounded-lg px-2 py-1.5 focus:outline-none">
                                     <option value="W1" selected>สัปดาห์ที่ 1</option>
                                     <option value="W2">สัปดาห์ที่ 2</option>
@@ -362,7 +364,6 @@
                             </div>
                         </div>
 
-                        <!-- Grid Table for Students status -->
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[500px] border-collapse">
                                 <thead>
@@ -370,11 +371,11 @@
                                         <th class="pb-2 w-16">เลขที่</th>
                                         <th class="pb-2">ชื่อเพื่อนร่วมชั้น</th>
                                         <th class="pb-2 w-28">ประเภทสิทธิ์</th>
-                                        <th class="pb-2 w-32 text-center">สถานะสัปดาห์นี้</th>
+                                        <th class="pb-2 w-32 text-center">สถานะชำระเงิน</th>
                                     </tr>
                                 </thead>
                                 <tbody id="weekly-payment-tbody" class="divide-y divide-slate-100 text-sm">
-                                    <!-- Populated with all approved users -->
+                                    <!-- Populated dynamically -->
                                 </tbody>
                             </table>
                         </div>
@@ -383,7 +384,7 @@
                     <!-- Right: Historical Transactions Logs -->
                     <div class="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
                         <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2 border-b border-slate-100 pb-3">
-                            <i class="fa-solid fa-history text-slate-500"></i> สมุดบันทึกรายรับรายจ่ายทั้งหมด
+                            <i class="fa-solid fa-history text-slate-500"></i> บันทึกประวัติกระแสเงินสด
                         </h3>
                         
                         <div id="finance-logs-container" class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
@@ -393,7 +394,6 @@
                 </div>
             </div>
 
-            <!-- TAB 3: CONFLICTS & RANDOMIZER -->
             <div id="section-polls" class="space-y-6 hidden">
                 <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div class="flex items-center gap-3">
@@ -402,11 +402,10 @@
                         </div>
                         <div>
                             <h2 class="text-lg font-bold text-slate-900">ระบบยุติธรรมประจำห้อง 1/4</h2>
-                            <p class="text-xs text-slate-500">ลดปัญหาขัดแย้งด้วยการแสดงคะแนนโหวตและสุ่มเวรด้วยเกณฑ์ที่เท่าเทียม</p>
+                            <p class="text-xs text-slate-500">ลดปัญหาความขัดแย้งผ่านระบบลงมติ และการสุ่มงานที่โปร่งใส</p>
                         </div>
                     </div>
                     
-                    <!-- Action to Create Poll for Admin -->
                     <button id="btn-create-poll" onclick="openPollModal()" class="hidden px-4 py-2.5 bg-brand-600 hover:bg-brand-600/90 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-sm">
                         <i class="fa-solid fa-plus"></i> ตั้งมติห้องเรียนใหม่
                     </button>
@@ -415,7 +414,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     <!-- Left Column: Poll List -->
                     <div class="lg:col-span-7 space-y-4">
-                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">มติห้องและการโหวดที่กำลังดำเนินงาน</h3>
+                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">การลงมติในห้องเรียน</h3>
                         
                         <div id="polls-list-container" class="space-y-4">
                             <!-- Dinamically rendered polls list -->
@@ -427,14 +426,12 @@
                     <div class="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
                         <div class="text-center">
                             <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider inline-block">เครื่องมือสุ่มเลือกยุติธรรม</span>
-                            <h3 class="font-bold text-slate-900 text-base mt-2">วงล้อแห่งความเท่าเทียม</h3>
-                            <p class="text-xs text-slate-400 font-light mt-1">ใช้สุ่มกลุ่มคนทำความสะอาดประจำสัปดาห์ สุ่มตัวแทนพรีเซนต์ หรือสุ่มคนตอบคำถามเพื่อความโปร่งใส!</p>
+                            <h3 class="font-bold text-slate-900 text-base mt-2">วงล้อจำลองสุ่มรายชื่อ</h3>
+                            <p class="text-xs text-slate-400 font-light mt-1">ใช้สุ่มคนทำเวร สุ่มตัวแทนพรีเซนต์งาน หรือสุ่มตอบคำถามเพื่อความเท่าเทียมกัน</p>
                         </div>
 
-                        <!-- Beautiful HTML5 Canvas Wheel -->
                         <div class="flex flex-col items-center space-y-4">
                             <div class="relative w-64 h-64 border-4 border-slate-100 rounded-full shadow-inner bg-slate-50 flex items-center justify-center overflow-hidden">
-                                <!-- Spin Pointer arrow -->
                                 <div class="absolute top-0 left-1/2 -translate-x-1/2 -mt-1 z-30 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[20px] border-t-rose-500"></div>
                                 <canvas id="wheelCanvas" class="w-full h-full block transform transition-transform duration-100"></canvas>
                             </div>
@@ -447,16 +444,15 @@
                                 
                                 <div class="flex gap-2">
                                     <button onclick="spinTheWheel()" id="btn-spin" class="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs glow-button">
-                                        <i class="fa-solid fa-spinner animate-spin mr-1 hidden" id="spin-spinner"></i> หมุนวงล้อสุ่มเลย!
+                                        <i class="fa-solid fa-spinner animate-spin mr-1 hidden" id="spin-spinner"></i> หมุนวงล้อ
                                     </button>
                                     <button onclick="populateApprovedNames()" class="px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs" title="ดึงรายชื่อทุกคนในห้อง">
-                                        <i class="fa-solid fa-user-tag"></i> ดึงชื่อเพื่อนในห้อง
+                                        <i class="fa-solid fa-user-tag text-xs"></i> ดึงชื่อห้อง
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Result modal teaser -->
                         <div id="wheel-result-card" class="bg-gradient-to-tr from-rose-50 to-pink-50 border border-rose-100 rounded-xl p-4 text-center hidden">
                             <span class="text-[9px] font-bold text-rose-500 uppercase tracking-widest block">ผลลัพธ์ผู้โชคดี</span>
                             <h4 id="wheel-winner-text" class="text-lg font-bold text-rose-600 mt-1">...</h4>
@@ -465,17 +461,15 @@
                 </div>
             </div>
 
-            <!-- TAB 4: MEMBER MANAGEMENT & APPROVALS -->
             <div id="section-members" class="space-y-6 hidden">
                 
                 <!-- Approvals Container for admin only -->
                 <div id="admin-approvals-panel" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4 hidden">
                     <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2 border-b border-slate-100 pb-3 text-rose-600">
-                        <i class="fa-solid fa-user-shield"></i> สิทธิ์แอดมิน: รอคัดกรองการเข้าสู่ระบบ
+                        <i class="fa-solid fa-user-shield"></i> ระบบแอดมิน: รออนุมัติการขอเข้าใช้งานระบบ (ซิงค์เรียลไทม์)
                     </h3>
                     <div id="approvals-list" class="space-y-3">
-                        <!-- Populated dynamic list of pending users -->
-                        <p class="text-xs text-slate-400 font-light py-4 text-center">ไม่มีสมาชิกใหม่รอการอนุมัติในเวลานี้</p>
+                        <p class="text-xs text-slate-400 font-light py-4 text-center">ไม่มีสมาชิกใหม่รอการอนุมัติในขณะนี้</p>
                     </div>
                 </div>
 
@@ -484,9 +478,9 @@
                     <div class="flex justify-between items-center border-b border-slate-100 pb-3">
                         <div>
                             <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                                <i class="fa-solid fa-user-graduate text-brand-500"></i> ทำเนียบรายชื่อสมาชิกห้อง ม.1/4 ยืนยันตัวตนสำเร็จ
+                                <i class="fa-solid fa-user-graduate text-brand-500"></i> ทำเนียบสมาชิกห้อง ม.1/4 ที่ได้รับการยืนยันแล้ว
                             </h3>
-                            <p class="text-xs text-slate-400 font-light mt-0.5">รายชื่อทุกคนที่ได้รับการอนุมัติให้เข้าถึงห้องเรียน 1/4</p>
+                            <p class="text-xs text-slate-400 font-light mt-0.5">รายชื่อเพื่อนในห้องทั้งหมดที่มีบัญชีและเข้าสู่ระบบเชื่อมต่อสำเร็จ</p>
                         </div>
                     </div>
 
@@ -500,9 +494,9 @@
 
         <!-- FINANCE ENTRY RECORD MODAL -->
         <div id="finance-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm hidden">
-            <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4 border border-slate-100 animate-in fade-in zoom-in duration-150">
+            <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4 border border-slate-100">
                 <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                    <h3 id="finance-modal-title" class="font-bold text-slate-950">บันทึกรายการเงินกองกลาง</h3>
+                    <h3 id="finance-modal-title" class="font-bold text-slate-950">บันทึกยอดเงินกองกลาง</h3>
                     <button onclick="closeFinanceModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 
@@ -517,14 +511,13 @@
                         <input type="text" id="finance-description" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none" placeholder="เช่น ซื้อดินสอเขียนป้ายบอร์ด">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1">เพื่อนผู้ชำระเงิน (กรณีเป็นรายรับส่วนบุคคล)</label>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">เพื่อนผู้ชำระเงิน (กรณีเป็นรายสัปดาห์ / รายบุคคล)</label>
                         <select id="finance-student-select" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none">
                             <option value="">-- กองกลางห้องเรียน (ไม่ใช่รายคน) --</option>
-                            <!-- Dynamic options populated with approved students -->
                         </select>
                     </div>
                     <button type="submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs">
-                        ตกลง บันทึกข้อมูลเรียลไทม์
+                        ตกลง บันทึกข้อมูล
                     </button>
                 </form>
             </div>
@@ -540,17 +533,71 @@
                 
                 <form id="poll-creation-form" onsubmit="handlePollCreation(event)" class="space-y-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1">หัวข้อที่จะลงมติหรือแก้ข้อขัดแย้ง</label>
-                        <input type="text" id="poll-title-input" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none" placeholder="เช่น ควรตั้งงบส่งเงินสัปดาห์ละกี่บาทดี?">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">หัวข้อลงประชามติ</label>
+                        <input type="text" id="poll-title-input" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none" placeholder="เช่น ซื้อดอกไม้ให้ครูเนื่องในวันไหว้ครู">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-500 mb-1">ตัวเลือกโหวต (คั่นด้วยเครื่องหมายจุลภาค , )</label>
-                        <textarea id="poll-options-input" required rows="3" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none" placeholder="เช่น ตัวเลือก A, ตัวเลือก B, ตัวเลือก C"></textarea>
+                        <textarea id="poll-options-input" required rows="3" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none" placeholder="เช่น เอาด้วย 20 บาท, เอาด้วย 30 บาท, ไม่อยากร่วม"></textarea>
                     </div>
                     <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs">
-                        ยืนยัน เปิดห้องโหวตอย่างเป็นทางการ
+                        เปิดให้เพื่อนโหวตเรียลไทม์
                     </button>
                 </form>
+            </div>
+        </div>
+
+        <!-- SYNC / DATABASE CONNECTION MODAL (Solves the issue of non-syncing devices) -->
+        <div id="sync-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden">
+            <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <h3 class="font-bold text-slate-950 flex items-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-brand-500"></i> ตั้งค่าเชื่อมต่อระบบออนไลน์ (Sync Devices)
+                    </h3>
+                    <button onclick="closeSyncModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+
+                <div class="text-xs text-slate-500 space-y-2 leading-relaxed">
+                    <p class="font-semibold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-100 flex items-start gap-2">
+                        <i class="fa-solid fa-circle-info mt-0.5"></i>
+                        <span>เหตุผลที่เครื่องอื่นไม่ซิงค์กัน: เนื่องจากเว็บเริ่มทำงานใน "โหมดเซฟในเครื่อง (Local Mode)" ทำให้ข้อมูลแยกกันอยู่ในมือถือและคอมแต่ละเครื่องครับ เพื่อซิงค์ข้อมูลจริง คุณต้องใช้คีย์ Firebase ตัวเดียวกันใส่ในทุกเครื่อง!</span>
+                    </p>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="block text-xs font-bold text-slate-700">1. วาง Firebase Configuration JSON ของคุณเพื่อเชื่อมทุกเครื่องเข้าหากัน:</label>
+                    <textarea id="firebase-config-input" rows="6" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/20" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "...",
+  "projectId": "...",
+  "storageBucket": "...",
+  "messagingSenderId": "...",
+  "appId": "..."
+}'></textarea>
+                    
+                    <div class="flex gap-2 justify-end">
+                        <button onclick="clearFirebaseConfig()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all">
+                            ล้างค่ากลับเป็น Local
+                        </button>
+                        <button onclick="saveFirebaseConfig()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl transition-all shadow-md">
+                            เชื่อมต่อระบบคลาวด์ออนไลน์
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Backup and manual sync controls -->
+                <div class="border-t border-slate-100 pt-4 space-y-3">
+                    <label class="block text-xs font-bold text-slate-700">2. ทางเลือกสำรอง: ส่งออก/นำเข้าข้อมูลระหว่างเครื่องด้วยไฟล์ดิบ</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="exportLocalData()" class="px-3 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-download"></i> ส่งออกข้อมูล (Backup)
+                        </button>
+                        <button onclick="triggerImport()" class="px-3 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-upload"></i> นำเข้าข้อมูล (Restore)
+                        </button>
+                    </div>
+                    <input type="file" id="import-file-input" class="hidden" onchange="importLocalData(event)" accept=".json">
+                </div>
             </div>
         </div>
 
@@ -561,55 +608,30 @@
 
         <!-- FOOTER -->
         <footer class="bg-white border-t border-slate-200 py-6 text-center text-slate-400 text-[10px]">
-            <p>© 2026 Class 1/4 Smart Hub. เพื่อความรักใคร่กลมเกลียวและการจัดการอย่างเปิดเผย</p>
+            <p>© 2026 Class 1/4 Smart Hub & Central Treasury System. ซิงค์สิทธิ์และข้อมูลบัญชีอย่างปลอดภัย</p>
         </footer>
     </div>
 
-    <!-- FIREBASE AND CLIENT-SIDE INTERACTION SCRIPTS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Global configuration with safety fallback
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'classroom-1-4-prod';
-        
-        // Provided environment Firebase configuration or sandbox fallback
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : {
-                apiKey: "mock-api-key",
-                authDomain: "mock-domain.firebaseapp.com",
-                projectId: "mock-project",
-                storageBucket: "mock-bucket",
-                messagingSenderId: "mock-sender",
-                appId: "mock-app-id"
-            };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'classroom-1-4-sync';
 
-        // Initialize Firebase SDKs
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-
-        // Core App Memory States
+        // Memory states
         let currentTab = 'home';
         let currentUser = null; 
         let allProfiles = [];
         let allTransactions = [];
         let allPolls = [];
-        
-        // Dynamic DB Mode to handle permission errors and switch to secure local storage storage
-        let dbMode = 'firebase'; // 'firebase' or 'local'
+        let dbMode = 'local'; // 'firebase' or 'local'
+        let unsubscribes = []; // To keep track of live snapshot listner subscriptions
 
-        // Simple Session storage to retain logged-in user details on page refresh
-        let sessionUserId = sessionStorage.getItem('class14_uid') || null;
-
-        // Custom invite/registration admin keys
-        const ADMIN_INVITE_CODE = "ADMIN14";
-
-        // HTML5 Canvas Wheel of fortune variable settings
+        // Canvas Wheel
         const canvas = document.getElementById('wheelCanvas');
-        const ctx = canvas.getContext('2d');
+        let ctx = null;
+        if (canvas) ctx = canvas.getContext('2d');
         let namesForWheel = [];
         let startAngle = 0;
         let arc = 0;
@@ -618,7 +640,8 @@
         let spinTime = 0;
         let spinTimeTotal = 0;
 
-        // Display notifications on screen
+        const ADMIN_INVITE_CODE = "ADMIN14";
+
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             const toastText = document.getElementById('toast-text');
@@ -635,27 +658,61 @@
             }, 3500);
         }
 
-        // Graceful switch to LocalStorage Sandbox Mode if Firestore has insufficient permissions
-        function switchToLocalMode() {
-            if (dbMode === 'local') return;
-            dbMode = 'local';
-            console.warn("Switching to LocalStorage Mode due to Firebase Permission issues.");
-            showToast("⚠️ ไม่สามารถบันทึกข้อมูลบนคลาวด์ได้เนื่องจากสิทธิ์เข้าถึงไม่เพียงพอ<br>ระบบสลับเป็น <b>'โหมดจำลองในเครื่อง (Local Sandbox Mode)'</b> เพื่อให้ทดสอบต่อได้ทันทีครับ!", "error");
-            
-            // Render a visually beautiful mode indicator
-            if (!document.getElementById('db-mode-indicator')) {
-                const indicator = document.createElement('div');
-                indicator.id = 'db-mode-indicator';
-                indicator.className = 'fixed bottom-24 left-6 z-50 bg-amber-500 text-slate-950 text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 animate-bounce';
-                indicator.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> โหมดบันทึกในเครื่อง (Local Storage Sandbox)';
-                document.body.appendChild(indicator);
+        window.openSyncModal = function() {
+            // Pre-fill input with current configuration if exists
+            const saved = localStorage.getItem('class14_firebase_config');
+            if (saved) {
+                document.getElementById('firebase-config-input').value = JSON.stringify(JSON.parse(saved), null, 2);
             }
-
-            loadLocalStorageData();
+            document.getElementById('sync-modal').classList.remove('hidden');
         }
 
-        // Seeding fully functional default mock data if local storage is fresh
-        function loadLocalStorageData() {
+        window.closeSyncModal = function() {
+            document.getElementById('sync-modal').classList.add('hidden');
+        }
+
+        window.saveFirebaseConfig = function() {
+            const raw = document.getElementById('firebase-config-input').value.trim();
+            if (!raw) {
+                showToast("กรุณากรอกคีย์ Configuration ในรูปแบบ JSON ก่อนกดตกลงครับ", "error");
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (!parsed.apiKey || !parsed.projectId) {
+                    showToast("รูปแบบ JSON ไม่ถูกต้อง ขาดฟิลด์สำคัญ เช่น apiKey หรือ projectId", "error");
+                    return;
+                }
+                localStorage.setItem('class14_firebase_config', JSON.stringify(parsed));
+                showToast("บันทึกคีย์ฐานข้อมูลเรียบร้อยแล้ว! หน้ากำลังรีเฟรชเพื่อทดสอบซิงค์ออนไลน์...", "success");
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } catch (err) {
+                showToast("ข้อมูลไม่ใช่ JSON ที่ถูกต้อง กรุณาตรวจสอบวงเล็บปีกกาและเครื่องหมายอัญประกาศคู่", "error");
+            }
+        }
+
+        window.clearFirebaseConfig = function() {
+            localStorage.removeItem('class14_firebase_config');
+            showToast("สลับระบบเป็นโหมดออฟไลน์ทำงานเฉพาะเครื่องเสร็จเรียบร้อย", "info");
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
+
+        function loadLocalStorageSandbox() {
+            dbMode = 'local';
+            document.getElementById('db-status-text').innerText = "โหมดออฟไลน์ (ในเครื่อง)";
+            document.getElementById('btn-db-status').className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors";
+            
+            const badgeMob = document.getElementById('db-badge-mob');
+            if (badgeMob) {
+                badgeMob.className = "text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 cursor-pointer";
+                badgeMob.innerHTML = '<i class="fa-solid fa-cloud-slash mr-1"></i> Local';
+            }
+
             let localProfiles = JSON.parse(localStorage.getItem('class14_profiles'));
             let localTransactions = JSON.parse(localStorage.getItem('class14_transactions'));
             let localPolls = JSON.parse(localStorage.getItem('class14_polls'));
@@ -691,26 +748,6 @@
                         role: "member",
                         status: "approved",
                         payments: { "W1": false, "W2": false }
-                    },
-                    {
-                        uid: 'student-pending-1',
-                        studentNo: 24,
-                        fullName: "นายณัฐพล เรียนเก่ง",
-                        username: "nattaphol",
-                        password: "1234",
-                        role: "member",
-                        status: "pending",
-                        payments: {}
-                    },
-                    {
-                        uid: 'student-pending-2',
-                        studentNo: 32,
-                        fullName: "นางสาวสิรินทรา มีสุข",
-                        username: "sirintra",
-                        password: "1234",
-                        role: "member",
-                        status: "pending",
-                        payments: {}
                     }
                 ];
                 localStorage.setItem('class14_profiles', JSON.stringify(localProfiles));
@@ -721,20 +758,11 @@
                     {
                         id: 'tx-1',
                         type: 'income',
-                        amount: 1000,
-                        description: 'เงินสนับสนุนห้องเรียนเริ่มต้นจากคุณครูประจำชั้น',
-                        studentId: null,
-                        timestamp: Date.now() - 86400000 * 3,
-                        recordedBy: 'คุณครู ม.1/4'
-                    },
-                    {
-                        id: 'tx-2',
-                        type: 'expense',
-                        amount: 150,
-                        description: 'ซื้อบอร์ดจัดกิจกรรมตกแต่งห้องเรียน',
+                        amount: 500,
+                        description: 'เงินสนับสนุนห้องเรียนเริ่มต้นจากโรงเรียน',
                         studentId: null,
                         timestamp: Date.now() - 86400000 * 2,
-                        recordedBy: 'นายอภิวัฒน์ (หัวหน้าห้อง)'
+                        recordedBy: 'คุณครู ม.1/4'
                     }
                 ];
                 localStorage.setItem('class14_transactions', JSON.stringify(localTransactions));
@@ -744,11 +772,10 @@
                 localPolls = [
                     {
                         id: 'poll-1',
-                        title: 'มติห้อง: จัดกิจกรรมกีฬาสีเทอมนี้ เราจะออกแบบเสื้อสีอะไรดี?',
+                        title: 'จัดเวรทำความสะอาดกลุ่มย่อยช่วงเช้าหรือเย็นสะดวกกว่า?',
                         options: [
-                            { text: 'สีน้ำเงินสลัวมินิมอล (Minimal Indigo)', votes: ['student-somchai-uid'] },
-                            { text: 'สีส้มสะท้อนแสงซิ่ง (Neon Orange)', votes: ['student-somying-uid'] },
-                            { text: 'สีดำทองเท่ๆ (Dark Gold)', votes: [] }
+                            { text: 'ทำช่วงเช้าก่อนเข้าเรียน', votes: ['student-somchai-uid'] },
+                            { text: 'ทำช่วงเย็นหลังเลิกเรียน', votes: ['student-somying-uid'] }
                         ],
                         createdBy: 'นายอภิวัฒน์ (หัวหน้าห้อง)',
                         createdAt: Date.now() - 86400000,
@@ -762,9 +789,10 @@
             allTransactions = localTransactions;
             allPolls = localPolls;
 
-            // Retain session authentication locally
-            if (sessionUserId) {
-                const matched = allProfiles.find(p => p.uid === sessionUserId);
+            // Restore active session matching
+            const sessionUid = sessionStorage.getItem('class14_uid');
+            if (sessionUid) {
+                const matched = allProfiles.find(p => p.uid === sessionUid);
                 if (matched && matched.status === 'approved') {
                     currentUser = matched;
                     renderDynamicRoleFeatures();
@@ -775,130 +803,113 @@
                 }
             }
 
-            // Immediately refresh all user interface components
             updateMembersUIPanels();
             updatePaymentsList();
             updateFinanceUIPanels();
             updatePollsUIPanels();
         }
 
-        // Handle User Authentication mode toggles
-        window.toggleAuthMode = function(mode) {
-            const btnLogin = document.getElementById('btn-tab-login');
-            const btnReg = document.getElementById('btn-tab-register');
-            const loginForm = document.getElementById('login-form');
-            const regForm = document.getElementById('register-form');
-            
-            if (mode === 'login') {
-                btnLogin.className = "py-2 text-xs font-bold rounded-lg transition-all bg-white text-brand-600 shadow-sm";
-                btnReg.className = "py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 transition-all";
-                loginForm.classList.remove('hidden');
-                regForm.classList.add('hidden');
-            } else {
-                btnReg.className = "py-2 text-xs font-bold rounded-lg transition-all bg-white text-brand-600 shadow-sm";
-                btnLogin.className = "py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 transition-all";
-                regForm.classList.remove('hidden');
-                loginForm.classList.add('hidden');
-            }
+        window.exportLocalData = function() {
+            const payload = {
+                profiles: allProfiles,
+                transactions: allTransactions,
+                polls: allPolls
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `class14_backup_${Date.now()}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("ส่งออกข้อมูลสำรองเสร็จสมบูรณ์!");
         }
 
-        // Global Alert box handler inside Auth module
-        function setAuthAlert(msg, type = 'info') {
-            const box = document.getElementById('auth-alert');
-            const text = document.getElementById('auth-alert-text');
-            const icon = document.getElementById('auth-alert-icon');
-            
-            if (!msg) {
-                box.classList.add('hidden');
-                return;
-            }
-            
-            box.classList.remove('hidden');
-            text.innerText = msg;
-            
-            if (type === 'error') {
-                box.className = "p-4 rounded-xl text-xs flex items-start gap-2 border border-rose-100 bg-rose-50 text-rose-700";
-                icon.className = "fa-solid fa-circle-exclamation mt-0.5 text-rose-500";
-            } else if (type === 'warning') {
-                box.className = "p-4 rounded-xl text-xs flex items-start gap-2 border border-amber-100 bg-amber-50 text-amber-700";
-                icon.className = "fa-solid fa-circle-notch animate-spin mt-0.5 text-amber-500";
-            } else {
-                box.className = "p-4 rounded-xl text-xs flex items-start gap-2 border border-emerald-100 bg-emerald-50 text-emerald-700";
-                icon.className = "fa-solid fa-circle-check mt-0.5 text-emerald-500";
-            }
+        window.triggerImport = function() {
+            document.getElementById('import-file-input').click();
         }
 
-        // Handle User Login verification
+        window.importLocalData = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.profiles && parsed.transactions && parsed.polls) {
+                        localStorage.setItem('class14_profiles', JSON.stringify(parsed.profiles));
+                        localStorage.setItem('class14_transactions', JSON.stringify(parsed.transactions));
+                        localStorage.setItem('class14_polls', JSON.stringify(parsed.polls));
+                        showToast("นำเข้าข้อมูลสำเร็จแล้ว! หน้าเว็บกำลังรีเฟรช...", "success");
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showToast("โครงสร้างไฟล์ข้อมูลสำรองไม่ถูกต้อง ไม่พบคีย์ที่กำหนด", "error");
+                    }
+                } catch (err) {
+                    showToast("ไม่สามารถอ่านไฟล์ได้ เนื่องจากไม่ใช่ไฟล์ JSON ที่ถูกต้อง", "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
         window.handleLogin = async function(event) {
             event.preventDefault();
             const username = document.getElementById('login-username').value.trim().toLowerCase();
             const password = document.getElementById('login-password').value;
 
             if (!username || !password) {
-                setAuthAlert("กรุณากรอกข้อมูลให้ครบถ้วน", "error");
+                setAuthAlert("กรุณากรอกข้อมูลเพื่อเข้าสู่ระบบ", "error");
                 return;
             }
 
-            setAuthAlert("กำลังตรวจสอบข้อมูลความปลอดภัย...", "warning");
+            setAuthAlert("กำลังเข้าสู่ระบบและตรวจสอบสิทธิ์แอดมิน...", "warning");
 
-            let matchedProfile = null;
-
-            // Direct check for the specific admin user matching requirements
-            if (username === 'aphiwat' && password === '61613') {
-                if (dbMode === 'firebase') {
-                    try {
-                        if (!auth.currentUser) {
-                            await signInAnonymously(auth);
-                        }
-                        const adminUid = 'admin-aphiwat-static-uid';
-                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', adminUid);
-                        const docSnap = await getDoc(docRef);
-                        
-                        matchedProfile = {
-                            uid: adminUid,
-                            studentNo: 1,
-                            fullName: "นายอภิวัฒน์ (หัวหน้าห้อง)",
-                            username: "aphiwat",
-                            password: "61613",
-                            role: "admin",
-                            status: "approved",
-                            payments: {}
-                        };
-                        
-                        if (!docSnap.exists()) {
-                            await setDoc(docRef, matchedProfile);
-                        } else {
-                            matchedProfile = { id: docSnap.id, ...docSnap.data() };
-                        }
-                    } catch (err) {
-                        console.error("Firebase admin setup failed, using local bypass...", err);
-                        switchToLocalMode();
-                        matchedProfile = allProfiles.find(p => p.username === 'aphiwat' && p.password === '61613');
-                    }
-                } else {
-                    matchedProfile = allProfiles.find(p => p.username === 'aphiwat' && p.password === '61613');
-                }
-            } else {
-                // Regular classmates credentials lookup
-                matchedProfile = allProfiles.find(p => p.username === username && p.password === password);
-            }
+            // Look up directly inside our synchronized profiles database
+            let matchedProfile = allProfiles.find(p => p.username === username && p.password === password);
 
             if (!matchedProfile) {
-                setAuthAlert("ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่อีกครั้ง", "error");
-                return;
+                // Hardcoded fallback for default admin bypass if database has just loaded
+                if (username === 'aphiwat' && password === '61613') {
+                    matchedProfile = {
+                        uid: 'admin-aphiwat-static-uid',
+                        studentNo: 1,
+                        fullName: "นายอภิวัฒน์ (หัวหน้าห้อง)",
+                        username: "aphiwat",
+                        password: "61613",
+                        role: "admin",
+                        status: "approved",
+                        payments: {}
+                    };
+                    
+                    if (dbMode === 'firebase') {
+                        try {
+                            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', matchedProfile.uid);
+                            await setDoc(ref, matchedProfile);
+                        } catch (err) {
+                            console.error("Firebase admin auto-write error", err);
+                        }
+                    } else {
+                        allProfiles.push(matchedProfile);
+                        localStorage.setItem('class14_profiles', JSON.stringify(allProfiles));
+                    }
+                } else {
+                    setAuthAlert("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาเข้าใหม่อีกครั้ง", "error");
+                    return;
+                }
             }
 
             if (matchedProfile.status === 'pending') {
-                setAuthAlert("บัญชีของคุณยังอยู่ระหว่างรออนุมัติ! กรุณาติดต่อแอดมินหรือหัวหน้าห้องให้ 'กดยืนยันอนุมัติ' ให้ก่อนจึงเข้าใช้ได้", "error");
+                setAuthAlert("บัญชีของคุณอยู่ระหว่างรออนุมัติ! กรุณาให้หัวหน้าห้องหรือแอดมิน 'กดยืนยันอนุมัติ' ให้ก่อนจึงจะสามารถเข้าใช้บริการได้ครับ", "error");
                 return;
             }
 
             currentUser = matchedProfile;
             sessionStorage.setItem('class14_uid', currentUser.uid);
-            sessionUserId = currentUser.uid;
             
-            setAuthAlert("เข้าสู่ระบบเรียบร้อย ยินดีต้อนรับ!", "success");
-            showToast(`ยินดีต้อนรับกลับมา, <b>${currentUser.fullName}</b>!`);
+            setAuthAlert("เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ!", "success");
+            showToast(`ยินดีต้อนรับ, <b>${currentUser.fullName}</b>! เข้าเชื่อมต่อเรียบร้อย`);
             
             setTimeout(() => {
                 document.getElementById('auth-screen').classList.add('hidden');
@@ -909,7 +920,6 @@
             }, 1000);
         }
 
-        // Handle User Registration
         window.handleRegister = async function(event) {
             event.preventDefault();
             const studentNo = parseInt(document.getElementById('reg-student-no').value);
@@ -923,7 +933,13 @@
                 return;
             }
 
-            setAuthAlert("กำลังยื่นเรื่องขอลงทะเบียน...", "warning");
+            const matchUser = allProfiles.find(p => p.username === username);
+            if (matchUser) {
+                setAuthAlert("ขออภัย! ชื่อผู้ใช้นี้ถูกใช้งานไปแล้วในฐานข้อมูลระบบ", "error");
+                return;
+            }
+
+            setAuthAlert("กำลังส่งคำขอลงทะเบียน...", "warning");
 
             const uid = crypto.randomUUID();
             const isAdmin = (inviteCode === ADMIN_INVITE_CODE);
@@ -943,53 +959,28 @@
 
             if (dbMode === 'firebase') {
                 try {
-                    if (!auth.currentUser) {
-                        await signInAnonymously(auth);
-                    }
-
-                    // Check if exists
-                    const matchUser = allProfiles.find(p => p.username === username);
-                    if (matchUser) {
-                        setAuthAlert("ขออภัย! ชื่อผู้ใช้นี้ถูกใช้งานไปแล้ว", "error");
-                        return;
-                    }
-
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', uid);
                     await setDoc(docRef, newProfileObj);
-
-                    setAuthAlert(isAdmin ? "ลงทะเบียนผู้ดูแลระบบสำเร็จ!" : "ลงทะเบียนเรียบร้อยแล้ว! กรุณารอแอดมินอนุมัติ", "success");
+                    setAuthAlert(isAdmin ? "ลงทะเบียนแอดมินหลักสำเร็จ!" : "ลงทะเบียนเรียบร้อยแล้ว! กรุณารอแอดมินหรือหัวหน้าห้องกดอนุมัติสิทธิ์", "success");
                     document.getElementById('register-form').reset();
                     setTimeout(() => toggleAuthMode('login'), 2000);
                 } catch (err) {
-                    console.error("Firebase register failed, switching to Local DB...", err);
-                    switchToLocalMode();
-                    registerUserLocally(newProfileObj, username);
+                    console.error("Firebase register error, fall back locally", err);
+                    showToast("ไม่สามารถเขียนสิทธิ์ใน Firebase คลาวด์ได้เนื่องจากปัญหาการเชื่อมต่อ", "error");
                 }
             } else {
-                registerUserLocally(newProfileObj, username);
+                allProfiles.push(newProfileObj);
+                localStorage.setItem('class14_profiles', JSON.stringify(allProfiles));
+                setAuthAlert(isAdmin ? "ลงทะเบียนแอดมินหลักสำเร็จ! (โหมด Local)" : "ลงทะเบียนเรียบร้อยแล้ว! (โหมด Local) กรุณารอแอดมินยืนยัน", "success");
+                document.getElementById('register-form').reset();
+                updateMembersUIPanels();
+                setTimeout(() => toggleAuthMode('login'), 2000);
             }
         }
 
-        function registerUserLocally(newProfileObj, username) {
-            const matchUser = allProfiles.find(p => p.username === username);
-            if (matchUser) {
-                setAuthAlert("ขออภัย! ชื่อผู้ใช้นี้ถูกใช้งานไปแล้ว", "error");
-                return;
-            }
-            allProfiles.push(newProfileObj);
-            localStorage.setItem('class14_profiles', JSON.stringify(allProfiles));
-            
-            setAuthAlert(newProfileObj.role === 'admin' ? "ลงทะเบียนผู้ดูแลระบบสำเร็จ!" : "ลงทะเบียนเรียบร้อยแล้ว! (โหมด Local) กรุณาให้แอดมินอนุมัติ", "success");
-            document.getElementById('register-form').reset();
-            updateMembersUIPanels();
-            setTimeout(() => toggleAuthMode('login'), 2000);
-        }
-
-        // Clear active session and log out
         window.logout = function() {
             sessionStorage.removeItem('class14_uid');
             currentUser = null;
-            sessionUserId = null;
             document.getElementById('navbar').classList.add('hidden');
             document.getElementById('auth-screen').classList.remove('hidden');
             document.getElementById('login-form').reset();
@@ -997,7 +988,6 @@
             document.getElementById('mobile-menu').classList.add('hidden');
         }
 
-        // Toggle view elements according to current authorized session role
         function renderDynamicRoleFeatures() {
             if (!currentUser) return;
 
@@ -1015,30 +1005,34 @@
                 if (el) el.innerText = `${currentUser.fullName} (เลขที่ ${currentUser.studentNo})`;
             });
 
-            const roleStr = currentUser.role === 'admin' ? 'หัวหน้าห้อง / ครูแอดมิน' : 'สมาชิกห้องเรียน 1/4';
+            // STRICT ROLE: 'admin' checks to prevent spoofing
+            const isAdmin = (currentUser.role === 'admin');
+            const roleStr = isAdmin ? 'หัวหน้าห้อง / ครูแอดมิน' : 'สมาชิกห้องเรียน 1/4';
+            
             roleLabels.forEach(el => {
                 if (el) {
                     el.innerText = roleStr;
-                    el.className = currentUser.role === 'admin' 
+                    el.className = isAdmin 
                         ? 'text-[9px] font-bold text-rose-500 block uppercase tracking-wider' 
                         : 'text-[9px] font-bold text-brand-500 block uppercase tracking-wider';
                 }
             });
 
-            if (currentUser.role === 'admin') {
+            if (isAdmin) {
                 adminPanels.forEach(p => p.classList.remove('hidden'));
             } else {
                 adminPanels.forEach(p => p.classList.add('hidden'));
             }
         }
 
-        // Handle Responsive Tab Switchings
         window.switchTab = function(tabName) {
             currentTab = tabName;
             
             const sections = ['home', 'finance', 'polls', 'members'];
             sections.forEach(s => {
-                document.getElementById(`section-${s}`).classList.add('hidden');
+                const secEl = document.getElementById(`section-${s}`);
+                if (secEl) secEl.classList.add('hidden');
+                
                 const btn = document.getElementById(`tab-${s}`);
                 if (btn) {
                     btn.classList.remove('bg-brand-50', 'text-brand-600', 'font-semibold');
@@ -1046,7 +1040,9 @@
                 }
             });
 
-            document.getElementById(`section-${tabName}`).classList.remove('hidden');
+            const targetSec = document.getElementById(`section-${tabName}`);
+            if (targetSec) targetSec.classList.remove('hidden');
+            
             const activeBtn = document.getElementById(`tab-${tabName}`);
             if (activeBtn) {
                 activeBtn.classList.add('bg-brand-50', 'text-brand-600', 'font-semibold');
@@ -1067,7 +1063,6 @@
             menu.classList.toggle('hidden');
         }
 
-        // Refresh and render the member listing grids and admin approvals list
         function updateMembersUIPanels() {
             const approvalsList = document.getElementById('approvals-list');
             const approvedGrid = document.getElementById('approved-members-grid');
@@ -1078,60 +1073,69 @@
             const pendingUsers = allProfiles.filter(p => p.status === 'pending');
             const approvedUsers = allProfiles.filter(p => p.status === 'approved' || p.role === 'admin');
 
-            if (pendingUsers.length > 0) {
-                badgePending.innerText = pendingUsers.length;
-                badgePending.classList.remove('hidden');
-                badgePendingMob.innerText = pendingUsers.length;
-            } else {
-                badgePending.classList.add('hidden');
-                badgePendingMob.innerText = '0';
-            }
-
-            if (currentUser && currentUser.role === 'admin') {
-                document.getElementById('admin-approvals-panel').classList.remove('hidden');
-                
-                if (pendingUsers.length === 0) {
-                    approvalsList.innerHTML = `<p class="text-xs text-slate-400 font-light py-4 text-center">ไม่มีสมาชิกใหม่รอคิวคัดกรองในขณะนี้</p>`;
+            if (badgePending && badgePendingMob) {
+                if (pendingUsers.length > 0) {
+                    badgePending.innerText = pendingUsers.length;
+                    badgePending.classList.remove('hidden');
+                    badgePendingMob.innerText = pendingUsers.length;
                 } else {
-                    approvalsList.innerHTML = pendingUsers.map(p => `
-                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-                            <div>
-                                <span class="text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full font-bold">เลขที่ ${p.studentNo}</span>
-                                <h4 class="font-bold text-slate-900 text-sm mt-1">${p.fullName}</h4>
-                                <p class="text-[10px] text-slate-400 font-mono mt-0.5">ไอดี: ${p.username}</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="approveMember('${p.uid}', true)" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
-                                    <i class="fa-solid fa-circle-check"></i> อนุมัติเข้าห้อง
-                                </button>
-                                <button onclick="approveMember('${p.uid}', false)" class="px-3.5 py-1.5 bg-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-600 text-[11px] font-bold rounded-lg transition-colors">
-                                    ปฏิเสธ
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
+                    badgePending.classList.add('hidden');
+                    badgePendingMob.innerText = '0';
                 }
-            } else {
-                document.getElementById('admin-approvals-panel').classList.add('hidden');
             }
 
-            approvedGrid.innerHTML = approvedUsers.map(p => {
-                const isAdmin = p.role === 'admin';
-                return `
-                    <div class="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 flex items-center gap-3 relative overflow-hidden">
-                        <div class="w-10 h-10 rounded-xl ${isAdmin ? 'bg-rose-100 text-rose-600' : 'bg-brand-100 text-brand-600'} flex items-center justify-center font-bold text-sm">
-                            ${p.studentNo}
+            // ONLY show the approval panel if they have role 'admin' in db
+            const isAdminUser = (currentUser && currentUser.role === 'admin');
+            const approvalsPanel = document.getElementById('admin-approvals-panel');
+            
+            if (approvalsPanel) {
+                if (isAdminUser) {
+                    approvalsPanel.classList.remove('hidden');
+                    if (pendingUsers.length === 0) {
+                        approvalsList.innerHTML = `<p class="text-xs text-slate-400 font-light py-4 text-center">ไม่มีสมาชิกใหม่รอคิวคัดกรองในขณะนี้</p>`;
+                    } else {
+                        approvalsList.innerHTML = pendingUsers.map(p => `
+                            <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                                <div>
+                                    <span class="text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full font-bold">เลขที่ ${p.studentNo}</span>
+                                    <h4 class="font-bold text-slate-900 text-sm mt-1">${p.fullName}</h4>
+                                    <p class="text-[10px] text-slate-400 font-mono mt-0.5">ไอดี: ${p.username}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="approveMember('${p.uid}', true)" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
+                                        <i class="fa-solid fa-circle-check"></i> อนุมัติ
+                                    </button>
+                                    <button onclick="approveMember('${p.uid}', false)" class="px-3.5 py-1.5 bg-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-600 text-[11px] font-bold rounded-lg transition-colors">
+                                        ปฏิเสธ
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    approvalsPanel.classList.add('hidden');
+                }
+            }
+
+            if (approvedGrid) {
+                approvedGrid.innerHTML = approvedUsers.map(p => {
+                    const isAdm = p.role === 'admin';
+                    return `
+                        <div class="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 flex items-center gap-3 relative overflow-hidden">
+                            <div class="w-10 h-10 rounded-xl ${isAdm ? 'bg-rose-100 text-rose-600' : 'bg-brand-100 text-brand-600'} flex items-center justify-center font-bold text-sm">
+                                ${p.studentNo}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                                    ${p.fullName}
+                                    ${isAdm ? '<span class="text-[8px] bg-rose-500 text-white px-1.5 py-0.5 rounded-full font-bold">แอดมิน</span>' : ''}
+                                </h4>
+                                <p class="text-[10px] text-slate-400 font-mono">ID: ${p.username}</p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
-                                ${p.fullName}
-                                ${isAdmin ? '<span class="text-[8px] bg-rose-500 text-white px-1.5 py-0.5 rounded-full font-bold">แอดมิน</span>' : ''}
-                            </h4>
-                            <p class="text-[10px] text-slate-400 font-mono">ID: ${p.username}</p>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            }
 
             if (studentSelect) {
                 const currentSelection = studentSelect.value;
@@ -1140,10 +1144,10 @@
                 studentSelect.value = currentSelection;
             }
 
-            document.getElementById('home-members-count').innerText = `${approvedUsers.length} / 40 คน`;
+            const homeMembersCount = document.getElementById('home-members-count');
+            if (homeMembersCount) homeMembersCount.innerText = `${approvedUsers.length} / 40 คน`;
         }
 
-        // Approvals trigger logic (Supports database & Local fallbacks)
         window.approveMember = async function(uid, isApprove) {
             if (!currentUser || currentUser.role !== 'admin') return;
 
@@ -1152,27 +1156,26 @@
                     const targetRef = doc(db, 'artifacts', appId, 'public', 'data', 'profiles', uid);
                     if (isApprove) {
                         await updateDoc(targetRef, { status: 'approved' });
-                        showToast("อนุมัติรับเพื่อนใหม่เข้าสู่ระบบห้อง 1/4 เรียบร้อย!");
+                        showToast("อนุมัติรับเพื่อนเข้าสู่ระบบผ่านคลาวด์เรียบร้อย!");
                     } else {
                         await deleteDoc(targetRef);
-                        showToast("ลบคำขอลงทะเบียนของเพื่อนเรียบร้อย", "info");
+                        showToast("ลบคำขอลงทะเบียนเรียบร้อย", "info");
                     }
                     return;
                 } catch (err) {
-                    console.error("Firebase write permission issue during approval, falling back locally...", err);
-                    switchToLocalMode();
+                    console.error("Firebase approval error", err);
                 }
             }
 
-            // Local Mode Logic
+            // Local fallback logic
             const idx = allProfiles.findIndex(p => p.uid === uid);
             if (idx !== -1) {
                 if (isApprove) {
                     allProfiles[idx].status = 'approved';
-                    showToast("อนุมัติรับเพื่อนใหม่เรียบร้อย! (โหมด Local)");
+                    showToast("อนุมัติเข้าใช้สำเร็จ (โหมด Local)");
                 } else {
                     allProfiles.splice(idx, 1);
-                    showToast("ปฏิเสธคำขอลงทะเบียนของเพื่อนเรียบร้อย", "info");
+                    showToast("ลบคำขอลงทะเบียนแล้ว (โหมด Local)", "info");
                 }
                 localStorage.setItem('class14_profiles', JSON.stringify(allProfiles));
                 updateMembersUIPanels();
@@ -1180,7 +1183,6 @@
             }
         }
 
-        // Refresh the student classroom weekly dues payment statuses checklist
         function updatePaymentsList() {
             const tbody = document.getElementById('weekly-payment-tbody');
             if (!tbody) return;
@@ -1189,14 +1191,14 @@
             const approvedUsers = allProfiles.filter(p => p.status === 'approved' || p.role === 'admin');
 
             if (approvedUsers.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-light text-xs">ยังไม่มีเพื่อนร่วมชั้นที่ได้รับการยืนยันเข้ามาแสดงตัวตน</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-light text-xs">ยังไม่มีเพื่อนร่วมชั้นที่เข้าร่วมในสัปดาห์นี้</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = approvedUsers.map(p => {
                 const paysObj = p.payments || {};
                 const isPaid = paysObj[selectedWeek] === true;
-                const isAdmin = p.role === 'admin';
+                const isAdm = p.role === 'admin';
                 
                 const badgeClass = isPaid 
                     ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
@@ -1205,17 +1207,18 @@
                 const badgeIcon = isPaid ? 'fa-circle-check' : 'fa-circle-xmark';
                 const badgeText = isPaid ? 'จ่ายเงินแล้ว' : 'ค้างชำระ';
 
-                const clickableAttr = (currentUser && currentUser.role === 'admin')
+                const isCurrentUserAdmin = (currentUser && currentUser.role === 'admin');
+                const clickableAttr = isCurrentUserAdmin
                     ? `onclick="toggleStudentPayment('${p.uid}', '${selectedWeek}', ${isPaid})"`
-                    : `onclick="showToast('เฉพาะหัวหน้าห้อง/แอดมิน เท่านั้นที่มีสิทธิ์กดแก้สถานะการส่งเงินห้องครับ', 'error')"`;
+                    : `onclick="showToast('เฉพาะแอดมินหรือหัวหน้าห้องที่มีสิทธิ์แก้ไขสถานะการส่งเงินของเพื่อนร่วมชั้นครับ', 'error')"`;
 
                 return `
                     <tr class="hover:bg-slate-50/50 transition-colors">
                         <td class="py-3 font-semibold text-slate-400">เลขที่ ${p.studentNo}</td>
                         <td class="py-3 font-semibold text-slate-900">${p.fullName}</td>
                         <td class="py-3">
-                            <span class="text-[10px] px-2 py-0.5 rounded-md font-semibold ${isAdmin ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-600'}">
-                                ${isAdmin ? 'แอดมิน/หัวหน้า' : 'สมาชิกห้อง'}
+                            <span class="text-[10px] px-2 py-0.5 rounded-md font-semibold ${isAdm ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-600'}">
+                                ${isAdm ? 'แอดมิน/หัวหน้า' : 'สมาชิกห้อง'}
                             </span>
                         </td>
                         <td class="py-3 text-center">
@@ -1232,7 +1235,6 @@
             updatePaymentsList();
         }
 
-        // Toggle Payment status per individual weekly record
         window.toggleStudentPayment = async function(uid, weekCode, currentStatus) {
             if (!currentUser || currentUser.role !== 'admin') return;
 
@@ -1249,27 +1251,25 @@
                         
                         await updateDoc(profileRef, { payments: existingPayments });
                         
-                        // Add central transaction record
                         if (newStatus) {
                             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
                                 type: 'income',
                                 amount: txAmount,
-                                description: `เงินค่าห้องส่งสัปดาห์ที่ ${weekCode.replace('W','')}`,
+                                description: `ส่งเงินค่าห้องสัปดาห์ที่ ${weekCode.replace('W','')}`,
                                 studentId: uid,
                                 timestamp: Date.now(),
                                 recordedBy: currentUser.fullName
                             });
                         }
-                        showToast("อัปเดตสิทธิ์ชำระเงินห้องบนระบบคลาวด์เรียบร้อย!");
+                        showToast("อัปเดตสิทธิ์ชำระเงินเรียลไทม์สำเร็จ!");
                         return;
                     }
                 } catch (err) {
-                    console.error("Firebase error while toggling payment, fallback to local...", err);
-                    switchToLocalMode();
+                    console.error("Firebase payment status error", err);
                 }
             }
 
-            // Local Mode toggles
+            // Local fallback saving
             const targetProfile = allProfiles.find(p => p.uid === uid);
             if (targetProfile) {
                 targetProfile.payments = targetProfile.payments || {};
@@ -1280,7 +1280,7 @@
                         id: crypto.randomUUID(),
                         type: 'income',
                         amount: txAmount,
-                        description: `เงินค่าห้องส่งสัปดาห์ที่ ${weekCode.replace('W','')}`,
+                        description: `ส่งเงินค่าห้องสัปดาห์ที่ ${weekCode.replace('W','')}`,
                         studentId: uid,
                         timestamp: Date.now(),
                         recordedBy: currentUser.fullName
@@ -1289,13 +1289,12 @@
                 }
 
                 localStorage.setItem('class14_profiles', JSON.stringify(allProfiles));
-                showToast(`บันทึกสถานะชำระเงินเรียบร้อย! (โหมด Local)`);
+                showToast(`บันทึกชำระเงินสำเร็จ (โหมด Local)`);
                 updatePaymentsList();
                 updateFinanceUIPanels();
             }
         }
 
-        // Perform real-time calculation on ledger variables
         function updateFinanceUIPanels() {
             const homeLogs = document.getElementById('home-transactions-list');
             const ledgerLogs = document.getElementById('finance-logs-container');
@@ -1311,7 +1310,8 @@
             });
 
             const formattedBal = `฿${totalBalance.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            document.getElementById('home-balance').innerText = formattedBal;
+            const homeBalEl = document.getElementById('home-balance');
+            if (homeBalEl) homeBalEl.innerText = formattedBal;
 
             const renderTxMarkup = (tx) => {
                 const isIncome = tx.type === 'income';
@@ -1333,7 +1333,7 @@
                             </div>
                             <div class="text-left">
                                 <h5 class="text-xs font-bold text-slate-800 leading-none">${tx.description}${targetNote}</h5>
-                                <span class="text-[9px] text-slate-400 mt-1 inline-block">บันทึกโดย ${tx.recordedBy || 'นิรนาม'} • ${dateStr}</span>
+                                <span class="text-[9px] text-slate-400 mt-1 inline-block">บันทึกโดย ${tx.recordedBy || 'ระบบ'} • ${dateStr}</span>
                             </div>
                         </div>
                         <span class="text-xs font-extrabold ${isIncome ? 'text-emerald-600' : 'text-rose-600'}">
@@ -1344,18 +1344,17 @@
             };
 
             if (allTransactions.length === 0) {
-                homeLogs.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-light">ยังไม่มีการบันทึกรายการบัญชีกองกลางในขณะนี้</div>`;
-                ledgerLogs.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-light">ยังไม่มีการบันทึกรายการบัญชีกองกลางในขณะนี้</div>`;
+                if (homeLogs) homeLogs.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-light">ยังไม่มีบันทึกเงินกองกลางห้องเรียน</div>`;
+                if (ledgerLogs) ledgerLogs.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs font-light">ยังไม่มีบันทึกเงินกองกลางห้องเรียน</div>`;
             } else {
-                homeLogs.innerHTML = allTransactions.slice(0, 4).map(renderTxMarkup).join('');
-                ledgerLogs.innerHTML = allTransactions.map(renderTxMarkup).join('');
+                if (homeLogs) homeLogs.innerHTML = allTransactions.slice(0, 4).map(renderTxMarkup).join('');
+                if (ledgerLogs) ledgerLogs.innerHTML = allTransactions.map(renderTxMarkup).join('');
             }
         }
 
-        // Handle Finance Modals Open-Close Actions
         window.openFinanceModal = function(type) {
             document.getElementById('finance-type').value = type;
-            document.getElementById('finance-modal-title').innerText = type === 'income' ? 'บันทึกยอดรายรับเงินกองกลาง' : 'บันทึกยอดรายจ่ายเงินกองกลาง';
+            document.getElementById('finance-modal-title').innerText = type === 'income' ? 'บันทึกรายรับของสัปดาห์/กองกลาง' : 'บันทึกรายจ่ายเงินส่วนกลาง';
             document.getElementById('finance-entry-form').reset();
             document.getElementById('finance-modal').classList.remove('hidden');
         }
@@ -1364,7 +1363,6 @@
             document.getElementById('finance-modal').classList.add('hidden');
         }
 
-        // Handle Form submissions for Central Ledger record transactions
         window.handleFinanceEntry = async function(event) {
             event.preventDefault();
             const type = document.getElementById('finance-type').value;
@@ -1373,7 +1371,7 @@
             const studentId = document.getElementById('finance-student-select').value;
 
             if (isNaN(amount) || amount <= 0 || !desc) {
-                showToast("กรุณากรอกข้อมูลจำนวนเงินและคำอธิบายที่ถูกต้อง", "error");
+                showToast("กรุณากรอกข้อมูลเพื่อบันทึกรายการ", "error");
                 return;
             }
 
@@ -1383,42 +1381,41 @@
                 description: desc,
                 studentId: studentId || null,
                 timestamp: Date.now(),
-                recordedBy: currentUser ? currentUser.fullName : 'นิรนาม'
+                recordedBy: currentUser ? currentUser.fullName : 'ระบบ'
             };
 
             if (dbMode === 'firebase') {
                 try {
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), newTxObj);
                     closeFinanceModal();
-                    showToast("บันทึกข้อมูลธุรกรรมกองกลางห้อง 1/4 เรียบร้อย!");
+                    showToast("บันทึกธุรกรรมลงฐานข้อมูลเรียบร้อย!");
                     return;
                 } catch (err) {
-                    console.error("Firebase write ledger entry failed, falling back to local...", err);
-                    switchToLocalMode();
+                    console.error("Firebase write entry failure", err);
                 }
             }
 
-            // Local Mode Saving
+            // Local Saving
             newTxObj.id = crypto.randomUUID();
             allTransactions.push(newTxObj);
             allTransactions.sort((a, b) => b.timestamp - a.timestamp);
             localStorage.setItem('class14_transactions', JSON.stringify(allTransactions));
             
             closeFinanceModal();
-            showToast("บันทึกข้อมูลธุรกรรมเรียบร้อย! (โหมด Local)");
+            showToast("บันทึกข้อมูลเรียบร้อย (โหมด Local)");
             updateFinanceUIPanels();
         }
 
-        // Update the dynamic polls/votes listing
         function updatePollsUIPanels() {
             const container = document.getElementById('polls-list-container');
             if (!container) return;
 
             const activePolls = allPolls.filter(p => p.active !== false);
-            document.getElementById('home-polls-count').innerText = `${activePolls.length} โพล`;
+            const homeCountEl = document.getElementById('home-polls-count');
+            if (homeCountEl) homeCountEl.innerText = `${activePolls.length} โพล`;
 
             if (allPolls.length === 0) {
-                container.innerHTML = `<div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs font-light">ยังไม่มีการตั้งมติเพื่อเปิดโหวตความเห็นในเวลานี้</div>`;
+                container.innerHTML = `<div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs font-light">ยังไม่มีการตั้งประชามติใดๆ ในขณะนี้</div>`;
                 return;
             }
 
@@ -1433,8 +1430,8 @@
                     
                     const hasVotedThisOpt = votesArray.includes(currentUser?.uid);
                     const voteBtnAction = isClosed 
-                        ? `onclick="showToast('มติห้องข้อนี้ปิดรับความคิดเห็นแล้วครับ', 'error')"`
-                        : `onclick="submitVoteOnPoll('${p.uid || p.id}', ${index})"`;
+                        ? `onclick="showToast('ปิดรับผลโหวตความเห็นนี้แล้วครับ', 'error')"`
+                        : `onclick="submitVoteOnPoll('${p.id || p.uid}', ${index})"`;
 
                     const btnBorderColor = hasVotedThisOpt ? 'border-brand-500 bg-brand-50' : 'border-slate-100 hover:border-slate-200 bg-slate-50';
 
@@ -1446,7 +1443,7 @@
                                     ${hasVotedThisOpt ? '<i class="fa-solid fa-circle-check text-brand-500"></i>' : ''}
                                     ${opt.text}
                                 </span>
-                                <span class="font-extrabold text-slate-500">${count} เสียง (${percent}%)</span>
+                                <span class="font-extrabold text-slate-500">${count} โหวต (${percent}%)</span>
                             </div>
                             <div class="relative z-10 w-full bg-slate-200 h-1 rounded-full overflow-hidden">
                                 <div class="h-full bg-brand-500 transition-all duration-700" style="width: ${percent}%"></div>
@@ -1455,8 +1452,9 @@
                     `;
                 }).join('');
 
-                const closeBtnHTML = (currentUser && currentUser.role === 'admin' && !isClosed)
-                    ? `<button onclick="closePollVoting('${p.uid || p.id}')" class="px-3 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-[10px] font-bold transition-all"><i class="fa-solid fa-circle-minus"></i> ปิดรับโหวต</button>`
+                const isCurrentUserAdmin = (currentUser && currentUser.role === 'admin');
+                const closeBtnHTML = (isCurrentUserAdmin && !isClosed)
+                    ? `<button onclick="closePollVoting('${p.id || p.uid}')" class="px-3 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-[10px] font-bold transition-all"><i class="fa-solid fa-lock"></i> ปิดมติ</button>`
                     : '';
 
                 return `
@@ -1464,10 +1462,10 @@
                         <div class="flex justify-between items-start gap-4">
                             <div class="text-left">
                                 <span class="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${isClosed ? 'bg-slate-100 text-slate-600' : 'bg-brand-500 text-white animate-pulse'}">
-                                    ${isClosed ? 'ปิดมติห้องแล้ว' : 'กำลังเปิดรับโหวต'}
+                                    ${isClosed ? 'ประชามติเสร็จสิ้น' : 'กำลังรับคะแนนโหวต'}
                                 </span>
                                 <h4 class="font-bold text-slate-900 text-sm sm:text-base mt-2 leading-snug">${p.title}</h4>
-                                <span class="text-[9px] text-slate-400 font-light block mt-1">มตินี้สร้างโดย ${p.createdBy} • ยอดโหวตรวม ${totalVotes} คน</span>
+                                <span class="text-[9px] text-slate-400 font-light block mt-1">ผู้ตั้งมติ: ${p.createdBy} • ยอดรวมสิทธิ์ออกเสียง ${totalVotes} คน</span>
                             </div>
                             ${closeBtnHTML}
                         </div>
@@ -1488,28 +1486,27 @@
             document.getElementById('poll-modal').classList.add('hidden');
         }
 
-        // Save new Poll document record
         window.handlePollCreation = async function(event) {
             event.preventDefault();
             const title = document.getElementById('poll-title-input').value.trim();
             const choicesStr = document.getElementById('poll-options-input').value.trim();
 
             if (!title || !choicesStr) {
-                showToast("กรุณากรอกรายละเอียดหัวข้อและตัวเลือกให้ครบถ้วน", "error");
+                showToast("กรุณากรอกข้อมูลโพล", "error");
                 return;
             }
 
             const options = choicesStr.split(',').map(text => ({ text: text.trim(), votes: [] })).filter(item => item.text.length > 0);
 
             if (options.length < 2) {
-                showToast("ตัวเลือกโหวตต้องมีอย่างน้อย 2 ทางเลือกขึ้นไปครับ", "error");
+                showToast("ต้องมีตัวเลือกขั้นต่ำ 2 อย่างขึ้นไปครับ", "error");
                 return;
             }
 
             const newPollObj = {
                 title: title,
                 options: options,
-                createdBy: currentUser ? currentUser.fullName : 'นิรนาม',
+                createdBy: currentUser ? currentUser.fullName : 'แอดมิน',
                 createdAt: Date.now(),
                 active: true
             };
@@ -1518,29 +1515,27 @@
                 try {
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'polls'), newPollObj);
                     closePollModal();
-                    showToast("เปิดห้องลงมติห้องใหม่เรียบร้อย!");
+                    showToast("เปิดโหวตมติห้องเรียนใหม่สำเร็จ!");
                     return;
                 } catch (err) {
-                    console.error("Firebase poll generation failed, falling back to local storage...", err);
-                    switchToLocalMode();
+                    console.error("Firebase write poll failed", err);
                 }
             }
 
-            // Local Saving Logic
+            // Local Save
             newPollObj.id = crypto.randomUUID();
             allPolls.push(newPollObj);
             allPolls.sort((a, b) => b.createdAt - a.createdAt);
             localStorage.setItem('class14_polls', JSON.stringify(allPolls));
             
             closePollModal();
-            showToast("เปิดห้องลงมติห้องใหม่เรียบร้อย! (โหมด Local)");
+            showToast("เปิดโหวตเรียบร้อย (โหมด Local)");
             updatePollsUIPanels();
         }
 
-        // CAST VOTE TO CENTRAL POLL
         window.submitVoteOnPoll = async function(pollId, optionIndex) {
             if (!currentUser) {
-                showToast("กรุณาเข้าสู่ระบบก่อนร่วมกิจกรรมลงประชามติห้องเรียน", "error");
+                showToast("กรุณาเข้าสู่ระบบก่อนออกเสียงลงมติห้อง", "error");
                 return;
             }
 
@@ -1559,16 +1554,15 @@
 
                         const pollRef = doc(db, 'artifacts', appId, 'public', 'data', 'polls', pollId);
                         await updateDoc(pollRef, { options: updatedOptions });
-                        showToast("โหวตคะแนนความเห็นคลาวด์เรียบร้อย!");
+                        showToast("ส่งคะแนนโหวตขึ้นระบบคลาวด์แล้ว!");
                         return;
                     }
                 } catch (err) {
-                    console.error("Firebase voting write issue, fallback to local...", err);
-                    switchToLocalMode();
+                    console.error("Firebase vote submission failure", err);
                 }
             }
 
-            // Local Voting logic
+            // Local fallback logic
             const targetPoll = allPolls.find(p => p.id === pollId || p.uid === pollId);
             if (targetPoll && targetPoll.active !== false) {
                 targetPoll.options.forEach((opt, index) => {
@@ -1580,12 +1574,11 @@
                 });
 
                 localStorage.setItem('class14_polls', JSON.stringify(allPolls));
-                showToast("บันทึกการส่งคะแนนโหวตแล้ว ขอบคุณครับ! (โหมด Local)");
+                showToast("บันทึกโหวตเรียบร้อย!");
                 updatePollsUIPanels();
             }
         }
 
-        // Terminate and lock Voting operations
         window.closePollVoting = async function(pollId) {
             if (!currentUser || currentUser.role !== 'admin') return;
 
@@ -1593,25 +1586,22 @@
                 try {
                     const pollRef = doc(db, 'artifacts', appId, 'public', 'data', 'polls', pollId);
                     await updateDoc(pollRef, { active: false });
-                    showToast("ปิดลงมติความคิดเห็นเรียบร้อย", "info");
+                    showToast("ปิดรับผลโหวตถาวรเสร็จสิ้น", "info");
                     return;
                 } catch (err) {
-                    console.error("Firebase closing poll failed, using local instead...", err);
-                    switchToLocalMode();
+                    console.error("Firebase lock poll failure", err);
                 }
             }
 
-            // Local close poll
             const targetPoll = allPolls.find(p => p.id === pollId || p.uid === pollId);
             if (targetPoll) {
                 targetPoll.active = false;
                 localStorage.setItem('class14_polls', JSON.stringify(allPolls));
-                showToast("ปิดลงมติความคิดเห็นเรียบร้อย (โหมด Local)", "info");
+                showToast("ปิดรับผลโหวตถาวรแล้ว (โหมด Local)", "info");
                 updatePollsUIPanels();
             }
         }
 
-        // HTML5 Canvas interactive Wheel Spinner Logic
         function initWheelCanvas() {
             if (!canvas) return;
             const dpr = window.devicePixelRatio || 1;
@@ -1627,11 +1617,11 @@
             
             if (approvedUsers.length > 0) {
                 textarea.value = approvedUsers.map(p => p.fullName.split(' ')[1] || p.fullName).join(', ');
-                showToast("นำเข้าข้อมูลรายชื่อสมาชิกเพื่อนห้อง 1/4 ครบถ้วน!");
+                showToast("ดึงข้อมูลรายชื่อเพื่อนร่วมห้องสำเร็จ!");
                 namesForWheel = textarea.value.split(',').map(n => n.trim()).filter(n => n.length > 0);
                 drawWheel();
             } else {
-                showToast("ไม่พบรายชื่อในระบบสำหรับสุ่ม", "warning");
+                showToast("ไม่พบรายชื่อในระบบ", "warning");
             }
         }
 
@@ -1692,7 +1682,7 @@
 
         window.spinTheWheel = function() {
             if (namesForWheel.length < 2) {
-                showToast("กรุณาใส่ชื่อรายชื่อสุ่มโชคอย่างน้อย 2 คนขึ้นไปครับ", "error");
+                showToast("ใส่รายชื่อเพื่อนขั้นต่ำ 2 คนเพื่อทำการเริ่มหมุนสุ่ม", "error");
                 return;
             }
             
@@ -1743,20 +1733,53 @@
             return b + c * (tc + -3 * ts + 3 * t);
         }
 
-        // Subscribe to live Firestore changes in real-time
-        async function startDatabaseSubscriptions() {
+        async function startCloudDatabaseSubscriptions() {
+            let config = null;
+
+            if (typeof __firebase_config !== 'undefined') {
+                config = JSON.parse(__firebase_config);
+            } else {
+                const savedConfig = localStorage.getItem('class14_firebase_config');
+                if (savedConfig) {
+                    config = JSON.parse(savedConfig);
+                }
+            }
+
+            if (!config || config.apiKey === 'mock-api-key') {
+                loadLocalStorageSandbox();
+                return;
+            }
+
             try {
+                // Initialize Firebase
+                const app = initializeApp(config);
+                const db = getFirestore(app);
+                const auth = getAuth(app);
+
+                // Wait for anonymous sign in (RULE 3)
+                await signInAnonymously(auth);
+
                 if (!auth.currentUser) {
-                    await signInAnonymously(auth);
+                    loadLocalStorageSandbox();
+                    return;
+                }
+
+                dbMode = 'firebase';
+                document.getElementById('db-status-text').innerText = "โหมดซิงค์คลาวด์ออนไลน์";
+                document.getElementById('btn-db-status').className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors";
+                
+                const badgeMob = document.getElementById('db-badge-mob');
+                if (badgeMob) {
+                    badgeMob.className = "text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 cursor-pointer animate-pulse";
+                    badgeMob.innerHTML = '<i class="fa-solid fa-cloud mr-1"></i> Cloud Active';
                 }
 
                 const profilesQuery = collection(db, 'artifacts', appId, 'public', 'data', 'profiles');
                 const transactionsQuery = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
                 const pollsQuery = collection(db, 'artifacts', appId, 'public', 'data', 'polls');
 
-                // Bind Profile updates stream
-                onSnapshot(profilesQuery, (snapshot) => {
-                    if (dbMode === 'local') return; // Stop listening if LocalStorage is currently active
+                // Realtime Profiles Subscription
+                const unsubProfiles = onSnapshot(profilesQuery, (snapshot) => {
                     allProfiles = [];
                     snapshot.forEach(doc => {
                         allProfiles.push({ id: doc.id, ...doc.data() });
@@ -1764,8 +1787,10 @@
                     
                     allProfiles.sort((a, b) => (a.studentNo || 0) - (b.studentNo || 0));
 
-                    if (sessionUserId) {
-                        const matched = allProfiles.find(p => p.uid === sessionUserId);
+                    // Verify session validation and update current profile object
+                    const sessionUid = sessionStorage.getItem('class14_uid');
+                    if (sessionUid) {
+                        const matched = allProfiles.find(p => p.uid === sessionUid);
                         if (matched && matched.status === 'approved') {
                             currentUser = matched;
                             renderDynamicRoleFeatures();
@@ -1773,20 +1798,19 @@
                             document.getElementById('navbar').classList.remove('hidden');
                         } else if (matched && matched.status === 'pending') {
                             logout();
-                            setAuthAlert("บัญชีของคุณอยู่ระหว่างรอตรวจสอบใหม่", "error");
+                            setAuthAlert("สถานะการอนุมัติถูกยกเลิกชั่วคราวโดยแอดมินระบบ", "error");
                         }
                     }
 
                     updateMembersUIPanels();
                     updatePaymentsList();
                 }, (error) => {
-                    console.error("Firestore Profiles stream failure", error);
-                    switchToLocalMode();
+                    console.error("Profiles sync failed", error);
+                    loadLocalStorageSandbox();
                 });
 
-                // Bind Transaction updates stream
-                onSnapshot(transactionsQuery, (snapshot) => {
-                    if (dbMode === 'local') return;
+                // Realtime Transactions Subscription
+                const unsubTransactions = onSnapshot(transactionsQuery, (snapshot) => {
                     allTransactions = [];
                     snapshot.forEach(doc => {
                         allTransactions.push({ id: doc.id, ...doc.data() });
@@ -1794,13 +1818,12 @@
                     allTransactions.sort((a, b) => b.timestamp - a.timestamp);
                     updateFinanceUIPanels();
                 }, (error) => {
-                    console.error("Firestore Transactions stream failure", error);
-                    switchToLocalMode();
+                    console.error("Transactions sync failed", error);
+                    loadLocalStorageSandbox();
                 });
 
-                // Bind Poll updates stream
-                onSnapshot(pollsQuery, (snapshot) => {
-                    if (dbMode === 'local') return;
+                // Realtime Polls Subscription
+                const unsubPolls = onSnapshot(pollsQuery, (snapshot) => {
                     allPolls = [];
                     snapshot.forEach(doc => {
                         allPolls.push({ id: doc.id, ...doc.data() });
@@ -1808,31 +1831,67 @@
                     allPolls.sort((a, b) => b.createdAt - a.createdAt);
                     updatePollsUIPanels();
                 }, (error) => {
-                    console.error("Firestore Polls stream failure", error);
-                    switchToLocalMode();
+                    console.error("Polls sync failed", error);
+                    loadLocalStorageSandbox();
                 });
 
+                unsubscribes.push(unsubProfiles, unsubTransactions, unsubPolls);
+
             } catch (err) {
-                console.error("Subscription preparation failed", err);
-                switchToLocalMode();
+                console.error("Initialization of Firebase failed", err);
+                loadLocalStorageSandbox();
             }
         }
 
-        // Execute setups on initial load
-        window.onload = async function() {
-            await startDatabaseSubscriptions();
+        window.toggleAuthMode = function(mode) {
+            const btnLogin = document.getElementById('btn-tab-login');
+            const btnReg = document.getElementById('btn-tab-register');
+            const loginForm = document.getElementById('login-form');
+            const regForm = document.getElementById('register-form');
             
-            // Check if Firebase permission error was thrown immediately, fallback appropriately
-            setTimeout(() => {
-                if (dbMode === 'firebase' && allProfiles.length === 0) {
-                    console.log("Empty cloud database state or connection timeout, checking local session...");
-                    if (sessionUserId) {
-                        loadLocalStorageData();
-                    }
-                }
-            }, 1500);
+            if (mode === 'login') {
+                btnLogin.className = "py-2 text-xs font-bold rounded-lg transition-all bg-white text-brand-600 shadow-sm";
+                btnReg.className = "py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 transition-all";
+                loginForm.classList.remove('hidden');
+                regForm.classList.add('hidden');
+            } else {
+                btnReg.className = "py-2 text-xs font-bold rounded-lg transition-all bg-white text-brand-600 shadow-sm";
+                btnLogin.className = "py-2 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-800 transition-all";
+                regForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            }
+        }
 
-            if (!sessionUserId) {
+        function setAuthAlert(msg, type = 'info') {
+            const box = document.getElementById('auth-alert');
+            const text = document.getElementById('auth-alert-text');
+            const icon = document.getElementById('auth-alert-icon');
+            
+            if (!msg) {
+                box.classList.add('hidden');
+                return;
+            }
+            
+            box.classList.remove('hidden');
+            text.innerText = msg;
+            
+            if (type === 'error') {
+                box.className = "p-4 rounded-xl text-xs flex items-start gap-2 border border-rose-100 bg-rose-50 text-rose-700";
+                icon.className = "fa-solid fa-circle-exclamation mt-0.5 text-rose-500";
+            } else if (type === 'warning') {
+                box.className = "p-4 rounded-xl text-xs flex items-start gap-2 border border-amber-100 bg-amber-50 text-amber-700";
+                icon.className = "fa-solid fa-circle-notch animate-spin mt-0.5 text-amber-500";
+            } else {
+                box.className = "p-4 rounded-xl text-xs flex items-start gap-2 border border-emerald-100 bg-emerald-50 text-emerald-700";
+                icon.className = "fa-solid fa-circle-check mt-0.5 text-emerald-500";
+            }
+        }
+
+        window.onload = async function() {
+            await startCloudDatabaseSubscriptions();
+            
+            const sessionUid = sessionStorage.getItem('class14_uid');
+            if (!sessionUid) {
                 logout();
             }
         }
